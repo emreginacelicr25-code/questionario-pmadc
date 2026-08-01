@@ -93,10 +93,18 @@ export default function Painel() {
 
         {aba === "consolidado" && (
           <div className="mt-4 space-y-4">
-            <p className="text-sm text-slate-500">
-              Texto pronto para colar diretamente no quadro-anexo (Escola / Alterações / Exclusões /
-              Inclusões / Comentários gerais) a ser enviado a formacaocontinuada@smeduquedecaxias.rj.gov.br.
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm text-slate-500">
+                Texto pronto para colar diretamente no quadro-anexo (Escola / Alterações / Exclusões /
+                Inclusões / Comentários gerais) a ser enviado a formacaocontinuada@smeduquedecaxias.rj.gov.br.
+              </p>
+              <button
+                onClick={() => window.print()}
+                className="shrink-0 rounded-md bg-gold px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+              >
+                🖨️ Baixar PDF do quadro
+              </button>
+            </div>
             <BlocoConsolidado titulo="Alterações" texto={consolidado.alteracoes} />
             <BlocoConsolidado titulo="Exclusões" texto={consolidado.exclusoes} />
             <BlocoConsolidado titulo="Inclusões" texto={consolidado.inclusoes} />
@@ -126,6 +134,58 @@ export default function Painel() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Folha formatada — só aparece ao imprimir / salvar como PDF */}
+      <div id="area-impressao" className="hidden print:block">
+        <div className="text-center text-sm font-bold leading-tight">
+          <p>ESTADO DO RIO DE JANEIRO</p>
+          <p>PREFEITURA MUNICIPAL DE DUQUE DE CAXIAS</p>
+          <p>SECRETARIA MUNICIPAL DE EDUCAÇÃO</p>
+          <p>SUBSECRETARIA PEDAGÓGICA</p>
+          <p>DEPARTAMENTO DE EDUCAÇÃO BÁSICA</p>
+        </div>
+
+        <table className="mt-6 w-full border-collapse text-xs">
+          <tbody>
+            <tr>
+              <td className="border border-black bg-slate-100 px-2 py-1 font-bold" colSpan={3}>
+                Escola: E.M. Regina Celi da Silva Cerdeira
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-black bg-slate-100 px-2 py-1 font-bold">Alterações</td>
+              <td className="border border-black bg-slate-100 px-2 py-1 font-bold">Exclusões</td>
+              <td className="border border-black bg-slate-100 px-2 py-1 font-bold">Inclusões</td>
+            </tr>
+            <tr>
+              <td className="whitespace-pre-wrap border border-black px-2 py-2 align-top">
+                {consolidado.alteracoes || "—"}
+              </td>
+              <td className="whitespace-pre-wrap border border-black px-2 py-2 align-top">
+                {consolidado.exclusoes || "—"}
+              </td>
+              <td className="whitespace-pre-wrap border border-black px-2 py-2 align-top">
+                {consolidado.inclusoes || "—"}
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-black bg-slate-100 px-2 py-1 font-bold" colSpan={3}>
+                Comentários gerais
+              </td>
+            </tr>
+            <tr>
+              <td className="whitespace-pre-wrap border border-black px-2 py-2 align-top" colSpan={3}>
+                {consolidado.comentarios || "—"}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p className="mt-3 text-[10px] text-slate-500">
+          Consolidado a partir de {respostas.length} resposta(s) — gerado em{" "}
+          {new Date().toLocaleString("pt-BR")}
+        </p>
       </div>
     </div>
   );
