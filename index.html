@@ -7,6 +7,25 @@
   </head>
   <body class="bg-slate-100">
     <div id="root"></div>
+    <script>
+      window.addEventListener("error", function (e) {
+        mostrarErro(e.message + "\n" + (e.error && e.error.stack ? e.error.stack : ""));
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        mostrarErro("Promise rejeitada: " + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
+      });
+      function mostrarErro(texto) {
+        var el = document.getElementById("erro-visivel");
+        if (!el) {
+          el = document.createElement("pre");
+          el.id = "erro-visivel";
+          el.style.cssText =
+            "position:fixed;top:0;left:0;right:0;background:#7f1d1d;color:#fff;padding:16px;font-size:12px;white-space:pre-wrap;z-index:99999;max-height:100vh;overflow:auto;";
+          document.body.appendChild(el);
+        }
+        el.textContent += "ERRO CAPTURADO:\n" + texto + "\n\n";
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
