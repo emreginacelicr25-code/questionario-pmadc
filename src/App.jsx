@@ -17,6 +17,7 @@ export default function App() {
   const [sinteseEditada, setSinteseEditada] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
+  const [erroNome, setErroNome] = useState("");
   const [fase, setFase] = useState(ETAPA_IDENTIFICACAO);
 
   const totalEtapas = EIXOS.length + 2; // identificação + eixos + revisão
@@ -56,6 +57,11 @@ export default function App() {
 
   function avancar() {
     if (fase === ETAPA_IDENTIFICACAO) {
+      if (!nome.trim()) {
+        setErroNome("Preencha seu nome para continuar.");
+        return;
+      }
+      setErroNome("");
       setFase("eixos");
       setEtapa(1);
     } else if (etapa < EIXOS.length) {
@@ -84,7 +90,7 @@ export default function App() {
     setErro("");
     const { error } = await supabase.from("respostas_pmadc").insert([
       {
-        nome: nome || null,
+        nome: nome.trim(),
         segmento: segmento || null,
         leu_minuta: leuMinuta || null,
         respostas,
@@ -146,12 +152,16 @@ export default function App() {
           {fase === ETAPA_IDENTIFICACAO && (
             <IdentificacaoStep
               nome={nome}
-              setNome={setNome}
+              setNome={(v) => {
+                setNome(v);
+                if (v.trim()) setErroNome("");
+              }}
               segmento={segmento}
               setSegmento={setSegmento}
               leuMinuta={leuMinuta}
               setLeuMinuta={setLeuMinuta}
               onAbrirPdf={() => setPdfAberto(true)}
+              erroNome={erroNome}
             />
           )}
 
@@ -216,7 +226,7 @@ function Card({ children }) {
   return <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">{children}</div>;
 }
 
-function IdentificacaoStep({ nome, setNome, segmento, setSegmento, leuMinuta, setLeuMinuta, onAbrirPdf }) {
+function IdentificacaoStep({ nome, setNome, segmento, setSegmento, leuMinuta, setLeuMinuta, onAbrirPdf, erroNome }) {
   return (
     <Card>
       <h2 className="text-lg font-bold text-navy">Bem-vindo(a)!</h2>
@@ -239,13 +249,18 @@ function IdentificacaoStep({ nome, setNome, segmento, setSegmento, leuMinuta, se
 
       <div className="mt-6 space-y-4">
         <div>
-          <label className="text-sm font-semibold text-slate-700">Nome (opcional)</label>
+          <label className="text-sm font-semibold text-slate-700">
+            Nome <span className="text-rose-600">*</span>
+          </label>
           <input
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-navy focus:outline-none"
-            placeholder="Seu nome"
+            className={`mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+              erroNome ? "border-rose-500 focus:border-rose-500" : "border-slate-300 focus:border-navy"
+            }`}
+            placeholder="Seu nome completo"
           />
+          {erroNome && <p className="mt-1 text-xs font-medium text-rose-600">{erroNome}</p>}
         </div>
 
         <div>
