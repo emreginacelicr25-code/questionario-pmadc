@@ -7,8 +7,14 @@ const ETAPA_IDENTIFICACAO = "identificacao";
 const ETAPA_REVISAO = "revisao";
 const ETAPA_ENVIADO = "enviado";
 
+// Período de preenchimento encerrado: quando true, o formulário fica somente
+// para consulta (navegação livre entre as perguntas, sem edição/envio).
+// Para reabrir o preenchimento em outro ciclo, basta trocar para false.
+const SOMENTE_LEITURA = true;
+
 export default function App() {
   const [pdfAberto, setPdfAberto] = useState(false);
+  const [quadroAberto, setQuadroAberto] = useState(false);
   const [etapa, setEtapa] = useState(0); // 0 = identificação, 1..EIXOS.length = eixos, depois revisão
   const [nome, setNome] = useState("");
   const [segmento, setSegmento] = useState("");
@@ -45,6 +51,7 @@ export default function App() {
   }, [respostas]);
 
   function atualizarResposta(id, valor) {
+    if (SOMENTE_LEITURA) return;
     setRespostas((prev) => ({ ...prev, [id]: valor }));
   }
 
@@ -57,7 +64,7 @@ export default function App() {
 
   function avancar() {
     if (fase === ETAPA_IDENTIFICACAO) {
-      if (!nome.trim()) {
+      if (!SOMENTE_LEITURA && !nome.trim()) {
         setErroNome("Preencha seu nome para continuar.");
         return;
       }
@@ -86,6 +93,7 @@ export default function App() {
   }
 
   async function enviar() {
+    if (SOMENTE_LEITURA) return;
     setEnviando(true);
     setErro("");
     const { error } = await supabase.from("respostas_pmadc").insert([
@@ -113,6 +121,12 @@ export default function App() {
   return (
     <div className="min-h-screen pb-28">
       <PdfModal aberto={pdfAberto} onFechar={() => setPdfAberto(false)} />
+      <ArquivoModal
+        aberto={quadroAberto}
+        onFechar={() => setQuadroAberto(false)}
+        titulo="Quadro consolidado — Análise da Minuta PMADC"
+        src="/quadro-analise-pmadc.pdf"
+      />
 
       <header className="bg-navy text-white">
         <div className="mx-auto max-w-5xl px-4 py-5">
@@ -125,6 +139,23 @@ export default function App() {
         </div>
       </header>
 
+      {SOMENTE_LEITURA && (
+        <div className="bg-amber-50 border-b border-amber-200">
+          <div className="mx-auto max-w-5xl px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-amber-900">
+              🔒 <b>Período de preenchimento encerrado.</b> Este formulário está disponível
+              apenas para consulta das perguntas — as respostas já foram consolidadas.
+            </p>
+            <button
+              onClick={() => setQuadroAberto(true)}
+              className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110"
+            >
+              📋 Ver quadro consolidado
+            </button>
+          </div>
+        </div>
+      )}
+
       {fase !== ETAPA_ENVIADO && (
         <div className="sticky top-0 z-30 bg-white shadow">
           <div className="mx-auto max-w-5xl px-4 py-2">
@@ -136,12 +167,20 @@ export default function App() {
             </div>
             <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
               <span>{respondidas} de {TOTAL_PERGUNTAS} perguntas respondidas</span>
-              <button
-                onClick={() => setPdfAberto(true)}
-                className="rounded bg-navy/10 px-2 py-1 font-medium text-navy hover:bg-navy/20"
-              >
-                📄 Consultar a minuta
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPdfAberto(true)}
+                  className="rounded bg-navy/10 px-2 py-1 font-medium text-navy hover:bg-navy/20"
+                >
+                  📄 Consultar a minuta
+                </button>
+                <button
+                  onClick={() => setQuadroAberto(true)}
+                  className="rounded bg-gold/10 px-2 py-1 font-medium text-gold hover:bg-gold/20"
+                >
+                  📋 Quadro consolidado
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -161,7 +200,9 @@ export default function App() {
               leuMinuta={leuMinuta}
               setLeuMinuta={setLeuMinuta}
               onAbrirPdf={() => setPdfAberto(true)}
+              onAbrirQuadro={() => setQuadroAberto(true)}
               erroNome={erroNome}
+              somenteLeitura={SOMENTE_LEITURA}
             />
           )}
 
@@ -170,6 +211,7 @@ export default function App() {
               eixo={EIXOS[etapa - 1]}
               respostas={respostas}
               onChange={atualizarResposta}
+              somenteLeitura={SOMENTE_LEITURA}
             />
           )}
 
@@ -178,6 +220,7 @@ export default function App() {
               sintese={sinteseEditada}
               setSintese={setSinteseEditada}
               erro={erro}
+              somenteLeitura={SOMENTE_LEITURA}
             />
           )}
 
@@ -200,13 +243,23 @@ export default function App() {
               ← Voltar
             </button>
             {fase === ETAPA_REVISAO ? (
-              <button
-                onClick={enviar}
-                disabled={enviando}
-                className="rounded-md bg-gold px-6 py-2 text-sm font-semibold text-white shadow hover:brightness-110 disabled:opacity-60"
-              >
-                {enviando ? "Enviando..." : "Enviar respostas"}
-              </button>
+              SOMENTE_LEITURA ? (
+                <button
+                  disabled
+                  className="rounded-md bg-slate-300 px-6 py-2 text-sm font-semibold text-slate-600 cursor-not-allowed"
+                  title="Período de preenchimento encerrado"
+                >
+                  🔒 Período de preenchimento encerrado
+                </button>
+              ) : (
+                <button
+                  onClick={enviar}
+                  disabled={enviando}
+                  className="rounded-md bg-gold px-6 py-2 text-sm font-semibold text-white shadow hover:brightness-110 disabled:opacity-60"
+                >
+                  {enviando ? "Enviando..." : "Enviar respostas"}
+                </button>
+              )
             ) : (
               <button
                 onClick={avancar}
@@ -226,15 +279,69 @@ function Card({ children }) {
   return <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">{children}</div>;
 }
 
-function IdentificacaoStep({ nome, setNome, segmento, setSegmento, leuMinuta, setLeuMinuta, onAbrirPdf, erroNome }) {
+// Modal genérico para exibir um PDF estático (ex.: o quadro consolidado),
+// independente do PdfModal já usado para a minuta.
+function ArquivoModal({ aberto, onFechar, titulo, src }) {
+  if (!aberto) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="flex h-full max-h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <h3 className="text-sm font-bold text-navy">{titulo}</h3>
+          <div className="flex items-center gap-2">
+            <a
+              href={src}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md bg-navy/10 px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy/20"
+            >
+              Abrir em nova aba
+            </a>
+            <button
+              onClick={onFechar}
+              className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200"
+            >
+              Fechar ✕
+            </button>
+          </div>
+        </div>
+        <iframe title={titulo} src={src} className="flex-1 w-full rounded-b-xl" />
+      </div>
+    </div>
+  );
+}
+
+function IdentificacaoStep({
+  nome,
+  setNome,
+  segmento,
+  setSegmento,
+  leuMinuta,
+  setLeuMinuta,
+  onAbrirPdf,
+  onAbrirQuadro,
+  erroNome,
+  somenteLeitura,
+}) {
   return (
     <Card>
       <h2 className="text-lg font-bold text-navy">Bem-vindo(a)!</h2>
       <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        Este questionário substitui o momento presencial de leitura coletiva e discussão previsto no
-        roteiro da SME para o Planejamento Integrado. Suas respostas serão organizadas automaticamente
-        nas colunas <b>Alterações</b>, <b>Exclusões</b> e <b>Inclusões</b> do quadro-anexo enviado à
-        Secretaria Municipal de Educação, além de responder à pergunta norteadora oficial.
+        {somenteLeitura ? (
+          <>
+            O período de preenchimento deste questionário já foi encerrado. As perguntas abaixo
+            permanecem disponíveis apenas para consulta. O resultado consolidado — organizado nas
+            colunas <b>Alterações</b>, <b>Exclusões</b> e <b>Inclusões</b> — pode ser conferido no
+            quadro final enviado à Secretaria Municipal de Educação.
+          </>
+        ) : (
+          <>
+            Este questionário substitui o momento presencial de leitura coletiva e discussão previsto no
+            roteiro da SME para o Planejamento Integrado. Suas respostas serão organizadas automaticamente
+            nas colunas <b>Alterações</b>, <b>Exclusões</b> e <b>Inclusões</b> do quadro-anexo enviado à
+            Secretaria Municipal de Educação, além de responder à pergunta norteadora oficial.
+          </>
+        )}
       </p>
 
       <button
@@ -242,23 +349,36 @@ function IdentificacaoStep({ nome, setNome, segmento, setSegmento, leuMinuta, se
         className="mt-4 flex w-full items-center justify-between rounded-lg border-2 border-dashed border-gold/50 bg-gold/5 px-4 py-3 text-left hover:bg-gold/10"
       >
         <span className="text-sm font-medium text-gold">
-          📄 Antes de começar, leia a minuta completa (PDF)
+          📄 {somenteLeitura ? "Consultar a minuta completa (PDF)" : "Antes de começar, leia a minuta completa (PDF)"}
         </span>
         <span className="text-gold">→</span>
       </button>
 
+      {somenteLeitura && (
+        <button
+          onClick={onAbrirQuadro}
+          className="mt-3 flex w-full items-center justify-between rounded-lg border-2 border-dashed border-navy/30 bg-navy/5 px-4 py-3 text-left hover:bg-navy/10"
+        >
+          <span className="text-sm font-medium text-navy">
+            📋 Ver o quadro consolidado (Alterações / Exclusões / Inclusões)
+          </span>
+          <span className="text-navy">→</span>
+        </button>
+      )}
+
       <div className="mt-6 space-y-4">
         <div>
           <label className="text-sm font-semibold text-slate-700">
-            Nome <span className="text-rose-600">*</span>
+            Nome {!somenteLeitura && <span className="text-rose-600">*</span>}
           </label>
           <input
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            className={`mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+            disabled={somenteLeitura}
+            className={`mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none disabled:bg-slate-100 disabled:text-slate-400 ${
               erroNome ? "border-rose-500 focus:border-rose-500" : "border-slate-300 focus:border-navy"
             }`}
-            placeholder="Seu nome completo"
+            placeholder={somenteLeitura ? "Preenchimento encerrado" : "Seu nome completo"}
           />
           {erroNome && <p className="mt-1 text-xs font-medium text-rose-600">{erroNome}</p>}
         </div>
@@ -269,8 +389,9 @@ function IdentificacaoStep({ nome, setNome, segmento, setSegmento, leuMinuta, se
             {["Educação Infantil", "1º ao 5º ano", "Educação Especial", "AEE", "Outro"].map((op) => (
               <button
                 key={op}
-                onClick={() => setSegmento(op)}
-                className={`rounded-md border px-3 py-2 text-sm ${
+                onClick={() => !somenteLeitura && setSegmento(op)}
+                disabled={somenteLeitura}
+                className={`rounded-md border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${
                   segmento === op
                     ? "border-navy bg-navy text-white"
                     : "border-slate-300 text-slate-600 hover:border-navy"
@@ -290,8 +411,9 @@ function IdentificacaoStep({ nome, setNome, segmento, setSegmento, leuMinuta, se
             {["Sim", "Parcialmente", "Ainda não"].map((op) => (
               <button
                 key={op}
-                onClick={() => setLeuMinuta(op)}
-                className={`rounded-md border px-3 py-2 text-sm ${
+                onClick={() => !somenteLeitura && setLeuMinuta(op)}
+                disabled={somenteLeitura}
+                className={`rounded-md border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${
                   leuMinuta === op
                     ? "border-navy bg-navy text-white"
                     : "border-slate-300 text-slate-600 hover:border-navy"
@@ -307,7 +429,7 @@ function IdentificacaoStep({ nome, setNome, segmento, setSegmento, leuMinuta, se
   );
 }
 
-function EixoStep({ eixo, respostas, onChange }) {
+function EixoStep({ eixo, respostas, onChange, somenteLeitura }) {
   return (
     <Card>
       <span className="text-xs font-semibold uppercase tracking-wide text-gold">Eixo {eixo.numero}</span>
@@ -330,9 +452,10 @@ function EixoStep({ eixo, respostas, onChange }) {
             <textarea
               value={respostas[p.id] || ""}
               onChange={(e) => onChange(p.id, e.target.value)}
+              readOnly={somenteLeitura}
               rows={p.destaque ? 5 : 3}
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-navy focus:outline-none"
-              placeholder="Escreva sua contribuição..."
+              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-navy focus:outline-none read-only:bg-slate-100 read-only:text-slate-400"
+              placeholder={somenteLeitura ? "Período de preenchimento encerrado" : "Escreva sua contribuição..."}
             />
           </div>
         ))}
@@ -341,7 +464,7 @@ function EixoStep({ eixo, respostas, onChange }) {
   );
 }
 
-function RevisaoStep({ sintese, setSintese, erro }) {
+function RevisaoStep({ sintese, setSintese, erro, somenteLeitura }) {
   const campos = ["alteracoes", "exclusoes", "inclusoes", "comentarios"];
   return (
     <Card>
@@ -361,8 +484,9 @@ function RevisaoStep({ sintese, setSintese, erro }) {
             <textarea
               value={sintese[c]}
               onChange={(e) => setSintese((prev) => ({ ...prev, [c]: e.target.value }))}
+              readOnly={somenteLeitura}
               rows={5}
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-navy focus:outline-none"
+              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-navy focus:outline-none read-only:bg-slate-100 read-only:text-slate-400"
               placeholder={`Nenhuma contribuição em "${CAMPOS[c].label}" ainda — pode escrever aqui.`}
             />
           </div>
