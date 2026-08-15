@@ -125,7 +125,7 @@ export default function App() {
         aberto={quadroAberto}
         onFechar={() => setQuadroAberto(false)}
         titulo="Quadro consolidado — Análise da Minuta PMADC"
-        src="/quadro-analise-pmadc.pdf"
+        src={`${import.meta.env.BASE_URL}quadro-analise-pmadc.pdf`}
       />
 
       <header className="bg-navy text-white">
